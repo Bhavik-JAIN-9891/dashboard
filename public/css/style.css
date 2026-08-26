@@ -1,0 +1,104 @@
+:root {
+  --bg-dark: #070b14;
+  --bg-panel: #111827;
+  --bg-surface: #1f2937;
+  --border: #374151;
+  --text-main: #f9fafb;
+  --text-muted: #9ca3af;
+  --primary: #0d9488;
+  --danger: #ef4444;
+  --success: #10b981;
+  --warn: #f59e0b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg-dark);
+  color: var(--text-main);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Nav & Header */
+.top-nav {
+  height: 50px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+}
+.brand { font-weight: 700; font-size: 15px; letter-spacing: 0.5px; }
+.brand span { color: var(--text-muted); font-weight: 500; }
+.nav-actions { display: flex; gap: 20px; font-size: 12px; font-weight: 600; align-items: center;}
+.dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; display: inline-block; box-shadow: 0 0 8px var(--success); }
+.clock { background: var(--bg-surface); padding: 4px 10px; border-radius: 4px; font-family: monospace; color: var(--primary); font-size: 13px; }
+
+/* Layout Grid */
+.app-container { display: flex; flex: 1; height: calc(100vh - 50px); }
+.sidebar { width: 300px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
+.menu-section { padding: 15px 0; border-bottom: 1px solid var(--border); }
+.menu-header { padding: 0 20px 10px; font-size: 11px; color: var(--text-muted); font-weight: 700; letter-spacing: 1px; }
+.menu-item { padding: 10px 20px; font-size: 13px; font-weight: 500; cursor: pointer; transition: 0.2s; border-left: 3px solid transparent;}
+.menu-item:hover, .menu-item.active { background: var(--bg-surface); color: var(--primary); border-left: 3px solid var(--primary); }
+
+/* Override Buttons */
+.override-controls { display: flex; flex-direction: column; gap: 6px; padding: 0 20px; max-height: 380px; overflow-y: auto; }
+.btn { padding: 8px 12px; border: none; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; color: white; transition: 0.15s; }
+.btn:hover { filter: brightness(1.2); }
+.btn-danger { background: var(--bg-surface); border: 1px solid var(--border); color: var(--danger); text-align: left; }
+.btn-danger:hover { background: #3f1d22; border-color: var(--danger); }
+.btn-success { background: var(--success); color: #070b14; }
+
+/* Workspace */
+.workspace { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+.panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px; display: flex; flex-direction: column; }
+.flowchart-panel { min-height: 520px; position: relative; }
+.panel-header { padding: 12px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.panel-header h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.badge { background: var(--bg-surface); padding: 4px 8px; border-radius: 4px; font-size: 11px; color: var(--text-muted); }
+
+/* SLD Scroll Canvas */
+.sld-canvas { position: relative; flex: 1; overflow-x: auto; overflow-y: hidden; background: #0b1120; min-width: 100%; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; }
+.sld-canvas-inner { position: relative; width: 2400px; height: 100%; min-height: 480px; }
+
+/* Diagram Components */
+.component { position: absolute; background: var(--bg-surface); border: 2px solid var(--border); padding: 8px 14px; border-radius: 6px; text-align: center; z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+.component h4 { margin: 0; font-size: 12px; color: var(--primary); }
+.component p { margin: 2px 0 0; font-size: 10px; color: var(--text-muted); }
+.transformer { border-radius: 50%; padding: 12px; border-color: var(--primary); background: var(--bg-panel); }
+
+.busbar { position: absolute; height: 10px; background: #475569; border-radius: 4px; z-index: 5; }
+
+.feeder-group { position: absolute; z-index: 10; display: flex; flex-direction: column; align-items: center; }
+.breaker { width: 32px; height: 32px; background: var(--bg-dark); border: 3px solid var(--success); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: 0.3s; }
+.breaker.fault { border-color: var(--danger); background: #3f1d22; color: var(--danger); box-shadow: 0 0 12px var(--danger); }
+
+/* SVG Animation */
+.wiring { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+.power-line { stroke: var(--border); stroke-width: 3; }
+.current-flow { stroke: var(--primary); stroke-width: 3; stroke-dasharray: 8 12; animation: flow 1s linear infinite; }
+.current-flow.fault { stroke: var(--danger); animation: none; }
+@keyframes flow { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
+
+/* Data Table */
+.data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.data-table th, .data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+.data-table th { color: var(--text-muted); font-weight: 600; }
+.status-warn { color: var(--warn); font-weight: bold; }
+.status-ok { color: var(--success); font-weight: bold; }
+
+/* View Toggling (SPA Logic) */
+.view-section { display: none; flex-direction: column; gap: 20px; animation: fadeIn 0.3s ease; }
+.view-section.active { display: flex; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Restore Button State */
+.btn-restore { background: #3f2c12; border: 1px solid var(--warn); color: var(--warn); text-align: left; }
+.btn-restore:hover { background: var(--warn); color: #000; }

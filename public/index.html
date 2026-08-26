@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BYPL Master Control Centre</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <nav class="top-nav">
+    <div class="brand">BYPL-04 <span>| DELHI DISCOM MASTER CONTROL</span></div>
+    <div class="nav-actions">
+      <div class="status-indicator"><span class="dot"></span> NET: SECURE</div>
+      <div id="live-clock" class="clock">00:00:00</div>
+    </div>
+  </nav>
+
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="menu-section" id="sidebar-menu">
+        <div class="menu-header">HMI MODULES</div>
+        <div class="menu-item active" onclick="switchView('sld', this)">⚡ SLD Flowchart (14 Divisions)</div>
+        <div class="menu-item" onclick="switchView('snmp', this)">📡 SNMP Diagnostics</div>
+        <div class="menu-item" onclick="switchView('telemetry', this)">📊 Telemetry DB</div>
+      </div>
+      <div class="menu-section">
+        <div class="menu-header">ZONE TRIP OVERRIDES</div>
+        <div class="override-controls" id="override-buttons">
+          <!-- Dynamically populated from database -->
+        </div>
+        <button class="btn btn-success" style="margin: 15px 20px; width: calc(100% - 40px);" onclick="clearAllFaults()">RESET ENTIRE GRID</button>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+  
+    <main class="workspace">
+      
+      <!-- VIEW 1: Flowchart Panel -->
+      <div id="view-sld" class="view-section active">
+        <div class="panel flowchart-panel">
+          <div class="panel-header">
+            <h3>Single Line Diagram (SLD) · 220kV to 11kV Distribution</h3>
+            <span class="badge">Pan / Scroll Horizontally ⇄</span>
+          </div>
+          <div class="sld-canvas">
+            <div class="sld-canvas-inner">
+              <svg class="wiring">
+                <line x1="50%" y1="15%" x2="50%" y2="28%" class="power-line" />
+                <line x1="50%" y1="15%" x2="50%" y2="28%" class="current-flow" id="flow-main" />
+                <line x1="50%" y1="42%" x2="50%" y2="52%" class="power-line" />
+                <line x1="50%" y1="42%" x2="50%" y2="52%" class="current-flow" id="flow-bus" />
+                <g id="dynamic-wires"></g>
+              </svg>
+              <div class="component source" style="top: 5%; left: 50%; transform: translateX(-50%);">
+                <h4>220kV Delhi Transco Grid</h4>
+                <p>Primary Bulk Supply</p>
+              </div>
+              <div class="component transformer" style="top: 28%; left: 50%; transform: translateX(-50%);">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg>
+                <p>66/11kV TX-01</p>
+              </div>
+              <div class="busbar" style="top: 52%; left: 2%; width: 96%;"></div>
+              <div class="busbar-label" style="top: 48%; left: 50%; transform: translateX(-50%); position: absolute; color: #94a3b8; font-size: 12px; font-weight: 600; letter-spacing: 1px;">66kV MAIN DISTRIBUTION BUSBAR</div>
+              <div id="dynamic-nodes"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 2: RTU Network Table -->
+      <div id="view-snmp" class="view-section">
+        <div class="panel">
+          <div class="panel-header"><h3>RTU Network Diagnostics (IEC 60870-5-104 / SNMP)</h3></div>
+          <table class="data-table">
+            <thead><tr><th>RTU Target Node</th><th>IPv4 Gateway</th><th>Latency</th><th>Telemetry Link</th></tr></thead>
+            <tbody id="network-table">
+              <tr><td colspan="4" style="text-align:center;">Fetching network telemetry...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- VIEW 3: Telemetry / Audit Log DB -->
+      <div id="view-telemetry" class="view-section">
+        <div class="panel">
+          <div class="panel-header"><h3>System Audit & Telemetry Logs</h3></div>
+          <table class="data-table">
+            <thead><tr><th>Log ID</th><th>Timestamp</th><th>Event Type</th><th>System Details</th></tr></thead>
+            <tbody id="telemetry-table">
+              <tr><td colspan="4" style="text-align:center;">Fetching system logs...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
