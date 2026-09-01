@@ -21,30 +21,9 @@ const db = new sqlite3.Database(dbPath, (err) => {
 // Database Schema & Authentic 14 BYPL Divisions Injection
 db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS audit_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp TEXT, event TEXT, details TEXT)`);
-  // Added a 'status' column to track live physical states
   db.run(`CREATE TABLE IF NOT EXISTS bypl_zones (id TEXT PRIMARY KEY, name TEXT, location TEXT, circle TEXT, status TEXT DEFAULT 'NORMAL')`);
 
   const zones = [
-    ['Z-01', 'Chandni Chowk', 'Town Hall Substation', 'Central', 'NORMAL'],
-    ['Z-02', 'Dariya Ganj', 'Kamla Market Substation', 'Central', 'NORMAL'],
-    ['Z-03', 'Pahar Ganj', 'Aram Bagh 11kV Grid', 'Central', 'NORMAL'],
-    ['Z-04', 'Shankar Road', 'Shankar Road 33kV Grid', 'Central', 'NORMAL'],
-    ['Z-05', 'Patel Nagar', 'East Patel Nagar Blk-18', 'Central', 'NORMAL'],
-    ['Z-06', 'Karkardooma', 'CBD-III Grid', 'East', 'NORMAL'],
-    ['Z-07', 'G T Road', 'Shahdara Substation', 'East', 'NORMAL'],
-    ['Z-08', 'Krishna Nagar', 'F-15/2 Substation', 'East', 'NORMAL'],
-    ['Z-09', 'Laxmi Nagar', 'Radhu Palace Grid', 'East', 'NORMAL'],
-    ['Z-10', 'Mayur Vihar I-II', 'Pocket 1 Substation', 'East', 'NORMAL'],
-    ['Z-11', 'Mayur Vihar-III', 'Substation Bldg 7', 'East', 'NORMAL'],
-    ['Z-12', 'Yamuna Vihar', 'C-7 Substation', 'East', 'NORMAL'],
-    ['Z-13', 'Karawal Nagar', '66kV Bhagirathi Grid', 'East', 'NORMAL'],
-    ['Z-14', 'Nand Nagri', 'Tahirpur Grid C-102', 'East', 'NORMAL']
-  ];
-  
-  const stmt = db.prepare(`INSERT OR IGNORE INTO bypl_zones VALUES (?, ?, ?, ?, ?)`);
-  zones.forEach(z => stmt.run(z));
-  stmt.finalize();
-});  const zones = [
     ['Z-01', 'Chandni Chowk', 'Town Hall Substation', 'Central'],
     ['Z-02', 'Dariya Ganj', 'Kamla Market Substation', 'Central'],
     ['Z-03', 'Pahar Ganj', 'Aram Bagh 11kV Grid', 'Central'],
@@ -60,8 +39,8 @@ db.serialize(() => {
     ['Z-13', 'Karawal Nagar', '66kV Bhagirathi Grid', 'East'],
     ['Z-14', 'Nand Nagri', 'Tahirpur Grid C-102', 'East']
   ];
-  
-  const stmt = db.prepare(`INSERT OR IGNORE INTO bypl_zones VALUES (?, ?, ?, ?)`);
+
+  const stmt = db.prepare(`INSERT OR IGNORE INTO bypl_zones (id, name, location, circle) VALUES (?, ?, ?, ?)`);
   zones.forEach(z => stmt.run(z));
   stmt.finalize();
 });
@@ -69,9 +48,9 @@ db.serialize(() => {
 // Serve Frontend
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-// API: Fetch All BYPL Grid Zones
+// API: Fetch All BYPL Grid Zones (includes persisted status)
 app.get('/api/topology', (req, res) => {
-  db.all(`SELECT * FROM bypl_zones`, [], (err, rows) => {
+  db.all(`SELECT * FROM bypl_zones ORDER BY id`, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
@@ -90,37 +69,47 @@ app.get('/api/network', (req, res) => {
   res.json(diagnostics);
 });
 
-// API: Hardware / NFC Fault Triggers
+// API: Hardware / NFC Fault Trigger — persists status so it survives a refresh/restart
 app.get('/trigger-fault', (req, res) => {
   const zone = req.query.zone || 'Z-12';
   const ts = new Date().toISOString();
-  db.run(`INSERT INTO audit_logs (timestamp, event, details) VALUES (?, ?, ?)`, [ts, 'FAULT', `BYPL ${zone} Tripped`]);
-  io.emit('nfc-action', { command: 'FAULT', zone: zone });
-  res.json({ status: 'SUCCESS', message: `${zone} Tripped`, timestamp: ts });
+  db.run(`UPDATE bypl_zones SET status = 'FAULT' WHERE id = ?`, [zone], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    db.run(`INSERT INTO audit_logs (timestamp, event, details) VALUES (?, ?, ?)`, [ts, 'FAULT', `BYPL ${zone} Tripped`]);
+    io.emit('nfc-action', { command: 'FAULT', zone: zone });
+    res.json({ status: 'SUCCESS', message: `${zone} Tripped`, timestamp: ts });
+  });
 });
 
-// API: Clear Faults
-// API: Clear Individual Zone Fault
+// API: Clear Individual Zone Fault — persists status
 app.get('/clear-zone', (req, res) => {
   const zone = req.query.zone;
   const ts = new Date().toISOString();
-  db.run(`INSERT INTO audit_logs (timestamp, event, details) VALUES (?, ?, ?)`, [ts, 'RESTORE', `BYPL ${zone} Restored`]);
-  io.emit('nfc-action', { command: 'CLEAR_ZONE', zone: zone });
-  res.json({ status: 'SUCCESS', message: `${zone} Restored`, timestamp: ts });
+  db.run(`UPDATE bypl_zones SET status = 'NORMAL' WHERE id = ?`, [zone], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    db.run(`INSERT INTO audit_logs (timestamp, event, details) VALUES (?, ?, ?)`, [ts, 'RESTORE', `BYPL ${zone} Restored`]);
+    io.emit('nfc-action', { command: 'CLEAR_ZONE', zone: zone });
+    res.json({ status: 'SUCCESS', message: `${zone} Restored`, timestamp: ts });
+  });
 });
 
-// API: Fetch Telemetry Audit Logs
+// API: Fetch Audit Logs
 app.get('/api/logs', (req, res) => {
   db.all(`SELECT * FROM audit_logs ORDER BY id DESC LIMIT 50`, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
 });
+
+// API: Global Clear — restores every zone, persists status
 app.get('/clear-fault', (req, res) => {
   const ts = new Date().toISOString();
-  db.run(`INSERT INTO audit_logs (timestamp, event, details) VALUES (?, ?, ?)`, [ts, 'CLEAR', 'All BYPL Zones Restored']);
-  io.emit('nfc-action', { command: 'CLEAR' });
-  res.json({ status: 'SUCCESS', message: 'System Restored', timestamp: ts });
+  db.run(`UPDATE bypl_zones SET status = 'NORMAL'`, [], (err) => {
+    if (err) return res.status(500).json({ error: err.message });
+    db.run(`INSERT INTO audit_logs (timestamp, event, details) VALUES (?, ?, ?)`, [ts, 'CLEAR', 'All BYPL Zones Restored']);
+    io.emit('nfc-action', { command: 'CLEAR' });
+    res.json({ status: 'SUCCESS', message: 'System Restored', timestamp: ts });
+  });
 });
 
 server.listen(3000, () => console.log('BYPL SCADA Server active on http://localhost:3000'));

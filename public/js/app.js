@@ -39,17 +39,18 @@ function buildSLD(zones) {
   const spacing = 96 / zones.length;
 
   zones.forEach((zone, index) => {
-    zoneState[zone.id] = false; // Initialize all as normal
+    const isFault = zone.status === 'FAULT';
+    zoneState[zone.id] = isFault; // Initialize from persisted DB status, not always normal
     const xPos = (spacing * index) + 3.5;
     
     wiresContainer.innerHTML += `
       <line x1="${xPos}%" y1="52%" x2="${xPos}%" y2="72%" class="power-line" />
-      <line x1="${xPos}%" y1="52%" x2="${xPos}%" y2="72%" class="current-flow" id="flow-${zone.id}" />
+      <line x1="${xPos}%" y1="52%" x2="${xPos}%" y2="72%" class="current-flow${isFault ? ' fault' : ''}" id="flow-${zone.id}" />
     `;
 
     nodesContainer.innerHTML += `
       <div class="feeder-group" style="top: 58%; left: ${xPos}%; transform: translateX(-50%);">
-        <div class="breaker" id="brk-${zone.id}" onclick="toggleFault('${zone.id}', '${zone.name}')" title="Toggle Breaker">CB</div>
+        <div class="breaker${isFault ? ' fault' : ''}" id="brk-${zone.id}" onclick="toggleFault('${zone.id}', '${zone.name}')" title="Toggle Breaker">CB</div>
       </div>
       <div class="component load" style="top: 72%; left: ${xPos}%; transform: translateX(-50%); width: 130px;">
         <h4>${zone.name}</h4><p>${zone.location}</p>
@@ -58,7 +59,7 @@ function buildSLD(zones) {
     `;
 
     buttonsContainer.innerHTML += `
-      <button class="btn btn-danger" id="btn-${zone.id}" data-name="${zone.name}" onclick="toggleFault('${zone.id}', '${zone.name}')">TRIP ${zone.id} · ${zone.name}</button>
+      <button class="btn ${isFault ? 'btn-restore' : 'btn-danger'}" id="btn-${zone.id}" data-name="${zone.name}" onclick="toggleFault('${zone.id}', '${zone.name}')">${isFault ? 'RESTORE' : 'TRIP'} ${zone.id}${isFault ? '' : ' · ' + zone.name}</button>
     `;
   });
 }
